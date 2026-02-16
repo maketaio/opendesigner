@@ -89,7 +89,7 @@
           }
         }}
       />
-      <PercentIcon class="size-4" />
+      <PercentIcon class="size-4 text-neutral-400" />
     </div>
   {/if}
   <Popover.Content

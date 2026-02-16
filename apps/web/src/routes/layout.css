@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@fontsource-variable/plus-jakarta-sans";
+
+@layer base {
+  body {
+    @apply bg-neutral-950 text-neutral-400;
+  }
+}

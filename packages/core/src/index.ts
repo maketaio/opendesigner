@@ -1,35 +1,46 @@
-// Types
-export type { Point, Bounds } from "./primitives/geometry.ts";
-export type { Color, Fill, Stroke } from "./primitives/styles.ts";
-export type { PathSegment } from "./primitives/path.ts";
+import {
+  type Color,
+  type Fill,
+  type Hsva,
+  hexToColor,
+  colorToHex,
+  colorToCss,
+  colorToHsva,
+  hsvaToColor,
+  colorEquals,
+} from "./fill";
 
-// Object classes
-export { CanvasObject } from "./primitives/object.ts";
-export { Rect } from "./primitives/rect.ts";
-export { Ellipse } from "./primitives/ellipse.ts";
-export { Path } from "./primitives/path.ts";
-export { Text } from "./primitives/text.ts";
-export { Group } from "./primitives/group.ts";
+export type Stroke = {
+  color: Color;
+  width: number;
+  style: "solid" | "dashed" | "dotted";
+  position: "inside" | "outside" | "center";
+};
 
-// Style utilities
-export { hexToColor, colorToCss } from "./primitives/styles.ts";
+export type Node = FrameNode;
 
-// Document
-export { Document } from "./primitives/document.ts";
+export type FrameNode = {
+  id: string;
+  name: string;
+  type: "frame";
+  parent: string | null;
+  order: string;
+  styles: FrameStyles;
+};
 
-// Commands
+export type FrameStyles = {
+  fill: Fill;
+  stroke: Stroke;
+};
+
 export {
-  Command,
-  MoveCommand,
-  ResizeCommand,
-  RotateCommand,
-  AddCommand,
-  RemoveCommand,
-  GroupCommand,
-  UngroupCommand,
-  MovePathPointCommand,
-  CompositeCommand,
-} from "./commands/index.ts";
-
-// Editor
-export { Editor, type HitTestResult } from "./editor.ts";
+  type Color,
+  type Fill,
+  type Hsva,
+  hexToColor,
+  colorToHex,
+  colorToCss,
+  colorToHsva,
+  hsvaToColor,
+  colorEquals,
+};

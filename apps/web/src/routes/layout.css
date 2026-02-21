@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "@fontsource-variable/plus-jakarta-sans";
 
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", sans-serif;
+}
+
 @layer base {
   body {
     @apply bg-neutral-950 text-neutral-400;

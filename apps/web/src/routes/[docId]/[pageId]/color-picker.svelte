@@ -1,15 +1,19 @@
 <script lang="ts">
   import {
-    hsvaToColor,
-    colorToHex,
     type Color,
-    colorToHsva,
     colorEquals,
+    colorToHex,
+    colorToHsva,
+    hsvaToColor,
   } from "@opendesigner/core";
   import { Slider } from "bits-ui";
   import { untrack } from "svelte";
 
-  let { value = $bindable() }: { value: Color } = $props();
+  type Props = {
+    value: Color;
+  };
+
+  let { value = $bindable() }: Props = $props();
 
   let hsva = $state(colorToHsva(value));
 

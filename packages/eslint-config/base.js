@@ -10,6 +10,10 @@ export default defineConfig([
   importPlugin.flatConfigs.typescript,
   prettier,
   {
+    settings: {
+      "import/internal-regex": "^\\$",
+    },
+
     rules: {
       "no-undef": "off",
 

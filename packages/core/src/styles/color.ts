@@ -1,8 +1,3 @@
-export type GradientStop = {
-  offset: number;
-  color: string;
-};
-
 export type Color = {
   r: number;
   g: number;
@@ -17,23 +12,18 @@ export type Hsva = {
   a: number;
 };
 
-export type Fill =
-  | { type: "solid"; color: Color }
-  | { type: "gradient"; stops: GradientStop[]; angle: number }
-  | { type: "image"; src: string; fit: "cover" | "contain" | "fill" };
-
-export function colorEquals(c1: Color, c2: Color): boolean {
+export function colorEquals(c1: Color, c2: Color) {
   return c1.r === c2.r && c1.g === c2.g && c1.b === c2.b && c1.a === c2.a;
 }
 
-export function colorToHex(c: Color): string {
+export function colorToHex(c: Color) {
   const r = c.r.toString(16).padStart(2, "0");
   const g = c.g.toString(16).padStart(2, "0");
   const b = c.b.toString(16).padStart(2, "0");
   return `#${r}${g}${b}`;
 }
 
-export function colorToCss(c: Color): string {
+export function colorToCss(c: Color) {
   return `rgba(${c.r},${c.g},${c.b},${c.a})`;
 }
 

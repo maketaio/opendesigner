@@ -1,46 +1,82 @@
-import {
-  type Color,
-  type Fill,
-  type Hsva,
-  hexToColor,
-  colorToHex,
-  colorToCss,
-  colorToHsva,
-  hsvaToColor,
-  colorEquals,
-} from "./fill";
+import { type FrameNode, frameStyle } from "./frame";
+import { type ScreenNode, screenStyle } from "./screen";
+import { type TextNode, textStyle } from "./text";
 
-export type Stroke = {
-  color: Color;
-  width: number;
-  style: "solid" | "dashed" | "dotted";
-  position: "inside" | "outside" | "center";
-};
+export type Node = FrameNode | TextNode | ScreenNode;
 
-export type Node = FrameNode;
+export function nodeStyle(node: Node) {
+  if (node.type === "frame") return frameStyle(node);
+  if (node.type === "screen") return screenStyle(node);
+  return textStyle(node);
+}
 
-export type FrameNode = {
+export function resolveChildren(
+  nodes: Record<string, Node>,
+  children: string[],
+) {
+  return children.map((id) => nodes[id]);
+}
+
+export type Document = {
   id: string;
   name: string;
-  type: "frame";
-  parent: string | null;
-  order: string;
-  styles: FrameStyles;
+  pages: PageMetadata[];
 };
 
-export type FrameStyles = {
-  fill: Fill;
-  stroke: Stroke;
+export type PageMetadata = {
+  id: string;
+  name: string;
 };
 
+export type Page = PageMetadata & {
+  nodes: Record<string, Node>;
+  children: string[];
+};
+
+export { type FrameNode, frameStyle, createFrame } from "./frame";
+export {
+  type TextNode,
+  type TextRun,
+  textStyle,
+  textRunStyle,
+  createText,
+  createTextRun,
+} from "./text";
+export {
+  type Background,
+  type GradientStop,
+  backgroundStyle,
+} from "./styles/background";
+export {
+  type BorderStyle,
+  type BorderWidths,
+  type Borders,
+  type BorderRadius,
+  bordersStyle,
+  borderRadiusStyle,
+} from "./styles/border";
 export {
   type Color,
-  type Fill,
   type Hsva,
-  hexToColor,
-  colorToHex,
-  colorToCss,
-  colorToHsva,
-  hsvaToColor,
   colorEquals,
-};
+  colorToCss,
+  colorToHex,
+  colorToHsva,
+  hexToColor,
+  hsvaToColor,
+} from "./styles/color";
+export { type Shadow, shadowStyle, opacityStyle } from "./styles/effect";
+export {
+  type StackLayout,
+  type StackAlignment,
+  type StackDistribution,
+  type StackDirection,
+  type Layout,
+  type Size,
+  type Dimensions,
+  type Padding,
+  layoutStyle,
+  dimensionsStyle,
+  paddingStyle,
+} from "./styles/layout";
+export { type ScreenNode, screenStyle, createScreen } from "./screen";

@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    type FrameNode,
     type Node,
     nodeStyle,
     type Page,
@@ -14,6 +13,7 @@
   import type { EditorView } from "prosemirror-view";
 
   import { docToNode } from "./prosemirror";
+  import SelectionOverlay from "./selection-overlay.svelte";
   import TextEditor from "./text-editor.svelte";
 
   type Props = {
@@ -41,135 +41,12 @@
   let spaceHeld = $state(false);
   let dragging = $state(false);
 
-  // -- Resize --
-
-  type ResizeEdge = "n" | "s" | "e" | "w";
-  let resizing = $state(false);
-  let resizeEdges = $state<ResizeEdge[]>([]);
-  let resizeTick = $state(0);
-
-  function getResizableAxes(node: Node): { x: boolean; y: boolean } {
-    if (node.type === "frame") {
-      return {
-        x: node.dimensions.width.type === "fixed",
-        y: node.dimensions.height.type === "fixed",
-      };
-    }
-    return { x: false, y: false };
-  }
-
-  const resizable = $derived.by(() => {
-    if (!selection) return { x: false, y: false };
-    const node = page.nodes[selection];
-    if (!node) return { x: false, y: false };
-    return getResizableAxes(node);
-  });
-
-  function cornerCursor(edges: ResizeEdge[]): string {
-    const set = new Set(edges);
-    if ((set.has("n") && set.has("w")) || (set.has("s") && set.has("e")))
-      return "nwse-resize";
-    if ((set.has("n") && set.has("e")) || (set.has("s") && set.has("w")))
-      return "nesw-resize";
-    return "default";
-  }
-
-  function startResize(e: PointerEvent, edges: ResizeEdge[]) {
-    e.preventDefault();
-    e.stopPropagation();
-    resizing = true;
-    resizeEdges = edges;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }
-
-  function onResizeMove(e: PointerEvent) {
-    if (!resizing || !selection) return;
-    const node = page.nodes[selection];
-    if (!node) return;
-
-    const dx = e.movementX / zoom;
-    const dy = e.movementY / zoom;
-
-    const edges = new Set(resizeEdges);
-
-    if (node.type === "frame") {
-      const frame = node as FrameNode;
-      if (edges.has("e") && frame.dimensions.width.type === "fixed") {
-        frame.dimensions.width.value = Math.max(
-          1,
-          frame.dimensions.width.value + dx,
-        );
-      }
-      if (edges.has("w") && frame.dimensions.width.type === "fixed") {
-        frame.dimensions.width.value = Math.max(
-          1,
-          frame.dimensions.width.value - dx,
-        );
-      }
-      if (edges.has("s") && frame.dimensions.height.type === "fixed") {
-        frame.dimensions.height.value = Math.max(
-          1,
-          frame.dimensions.height.value + dy,
-        );
-      }
-      if (edges.has("n") && frame.dimensions.height.type === "fixed") {
-        frame.dimensions.height.value = Math.max(
-          1,
-          frame.dimensions.height.value - dy,
-        );
-      }
-    }
-
-    // Force reactivity for node rendering + selectionRect
-    page.nodes[selection] = page.nodes[selection];
-    resizeTick++;
-  }
-
-  function onResizeEnd(e: PointerEvent) {
-    if (!resizing) return;
-    resizing = false;
-    resizeEdges = [];
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }
-
-  const selectionRect = $derived.by(
-    (): {
-      x: number;
-      y: number;
-      w: number;
-      h: number;
-    } | null => {
-      // Subscribe to pan/zoom/resize so the outline updates
-      /* eslint-disable @typescript-eslint/no-unused-expressions */
-      panX;
-      panY;
-      zoom;
-      resizeTick;
-      /* eslint-enable @typescript-eslint/no-unused-expressions */
-
-      if (!selection) {
-        return null;
-      }
-
-      const target = canvasEl.querySelector(`[data-id="${selection}"]`);
-      if (!target) {
-        return null;
-      }
-      const canvasRect = canvasEl.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      return {
-        x: targetRect.left - canvasRect.left - canvasEl.clientLeft,
-        y: targetRect.top - canvasRect.top - canvasEl.clientTop,
-        w: targetRect.width,
-        h: targetRect.height,
-      };
-    },
-  );
-
-  let canvasEl: HTMLDivElement;
+  let canvasEl = $state<HTMLDivElement>();
 
   $effect(() => {
+    if (!canvasEl) return;
     const handleWheel = (e: WheelEvent) => {
+      if (!canvasEl) return;
       e.preventDefault();
       if (e.ctrlKey) {
         const rect = canvasEl.getBoundingClientRect();
@@ -188,7 +65,7 @@
       }
     };
     canvasEl.addEventListener("wheel", handleWheel, { passive: false });
-    return () => canvasEl.removeEventListener("wheel", handleWheel);
+    return () => canvasEl?.removeEventListener("wheel", handleWheel);
   });
 
   const exitTextEditing = () => {
@@ -268,7 +145,7 @@
         zoom = 1;
       } else {
         const factor = e.code === "Equal" ? 1.25 : 0.8;
-        const rect = canvasEl.getBoundingClientRect();
+        const rect = canvasEl!.getBoundingClientRect();
         const cx = rect.width / 2;
         const cy = rect.height / 2;
         const newZoom = Math.min(Math.max(zoom * factor, 0.1), 10);
@@ -303,7 +180,7 @@
     e.preventDefault();
     e.stopPropagation();
     dragging = true;
-    canvasEl.setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
   }}
   onpointermove={(e) => {
     if (!dragging) return;
@@ -313,7 +190,7 @@
   onpointerup={(e) => {
     if (!dragging) return;
     dragging = false;
-    canvasEl.releasePointerCapture(e.pointerId);
+    e.currentTarget.releasePointerCapture(e.pointerId);
   }}
 >
   <div
@@ -346,87 +223,13 @@
     {/each}
   </div>
 
-  {#if selectionRect}
-    {@const s = selectionRect}
-    {@const rx = resizable.x}
-    {@const ry = resizable.y}
-    {@const handleSize = 8}
-    {@const edgeThickness = 6}
-
-    <!-- Selection outline -->
-    <div
-      class="absolute pointer-events-none z-10 outline-2 outline-blue-500"
-      style="left: {s.x}px; top: {s.y}px; width: {s.w}px; height: {s.h}px"
-    ></div>
-
-    <!-- Edge hit areas (invisible, thick strips along each edge) -->
-    {#if ry}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="absolute z-20 cursor-ns-resize"
-        style="left: {s.x + handleSize}px; top: {s.y -
-          edgeThickness / 2}px; width: {s.w -
-          handleSize * 2}px; height: {edgeThickness}px"
-        onpointerdown={(e) => startResize(e, ["n"])}
-        onpointermove={onResizeMove}
-        onpointerup={onResizeEnd}
-      ></div>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="absolute z-20 cursor-ns-resize"
-        style="left: {s.x + handleSize}px; top: {s.y +
-          s.h -
-          edgeThickness / 2}px; width: {s.w -
-          handleSize * 2}px; height: {edgeThickness}px"
-        onpointerdown={(e) => startResize(e, ["s"])}
-        onpointermove={onResizeMove}
-        onpointerup={onResizeEnd}
-      ></div>
-    {/if}
-    {#if rx}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="absolute z-20 cursor-ew-resize"
-        style="left: {s.x - edgeThickness / 2}px; top: {s.y +
-          handleSize}px; width: {edgeThickness}px; height: {s.h -
-          handleSize * 2}px"
-        onpointerdown={(e) => startResize(e, ["w"])}
-        onpointermove={onResizeMove}
-        onpointerup={onResizeEnd}
-      ></div>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="absolute z-20 cursor-ew-resize"
-        style="left: {s.x + s.w - edgeThickness / 2}px; top: {s.y +
-          handleSize}px; width: {edgeThickness}px; height: {s.h -
-          handleSize * 2}px"
-        onpointerdown={(e) => startResize(e, ["e"])}
-        onpointermove={onResizeMove}
-        onpointerup={onResizeEnd}
-      ></div>
-    {/if}
-
-    <!-- Corner handles -->
-    {#if rx || ry}
-      {#each [{ edges: ["n", "w"] as ResizeEdge[], x: s.x, y: s.y }, { edges: ["n", "e"] as ResizeEdge[], x: s.x + s.w, y: s.y }, { edges: ["s", "w"] as ResizeEdge[], x: s.x, y: s.y + s.h }, { edges: ["s", "e"] as ResizeEdge[], x: s.x + s.w, y: s.y + s.h }] as handle}
-        {@const activeEdges = handle.edges.filter((e) =>
-          e === "n" || e === "s" ? ry : rx,
-        ) as ResizeEdge[]}
-        {#if activeEdges.length > 0}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div
-            class="absolute z-30 bg-white border-2 border-blue-500"
-            style="left: {handle.x - handleSize / 2}px; top: {handle.y -
-              handleSize /
-                2}px; width: {handleSize}px; height: {handleSize}px; cursor: {cornerCursor(
-              activeEdges,
-            )}"
-            onpointerdown={(e) => startResize(e, activeEdges)}
-            onpointermove={onResizeMove}
-            onpointerup={onResizeEnd}
-          ></div>
-        {/if}
-      {/each}
-    {/if}
+  {#if selection}
+    <SelectionOverlay
+      {canvasEl}
+      bind:node={page.nodes[selection]}
+      {zoom}
+      {panX}
+      {panY}
+    />
   {/if}
 </div>

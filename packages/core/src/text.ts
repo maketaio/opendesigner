@@ -1,6 +1,7 @@
 import { type Color, colorEquals, colorToCss } from "./styles/color";
+import { type Dimensions, dimensionsStyle } from "./styles/layout";
 
-export type TextRunStyle = {
+export type RunStyle = {
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: number;
@@ -17,9 +18,9 @@ export type ParagraphStyle = {
 
 export type TextRun = {
   text: string;
-} & TextRunStyle;
+} & RunStyle;
 
-export function hasTextRunStyleOverrides(style: TextRunStyle): boolean {
+export function hasRunStyleOverrides(style: RunStyle): boolean {
   return (
     style.fontSize !== undefined ||
     style.fontFamily !== undefined ||
@@ -37,7 +38,11 @@ export type Paragraph = {
   content: TextRun[];
 } & ParagraphStyle;
 
-export type TextStyle = Required<ParagraphStyle> & Required<TextRunStyle>;
+export type TypographyStyle = Required<ParagraphStyle> & Required<RunStyle>;
+
+export type TextStyle = TypographyStyle & {
+  dimensions: Dimensions;
+};
 
 export type TextNode = {
   id: string;
@@ -55,11 +60,12 @@ const textDefaults: Omit<TextNode, "id" | "type" | "content"> = {
   color: { r: 9, g: 9, b: 11, a: 1 },
   lineHeight: 1.5,
   letterSpacing: 0,
+  dimensions: { width: { type: "hug" }, height: { type: "hug" } },
 };
 
-export function applyUniformTextStyle(
+export function applyUniformTypographyStyle(
   node: TextNode,
-  style: Partial<TextStyle>,
+  style: Partial<TypographyStyle>,
 ): TextNode {
   const updated = { ...node, ...style };
 
@@ -95,7 +101,7 @@ export function createText(
   });
 }
 
-export function textRunStyle(style: TextRunStyle) {
+export function runStyle(style: RunStyle) {
   const parts: string[] = [];
 
   if (style.fontSize !== undefined) {
@@ -138,14 +144,17 @@ export function paragraphStyle(style: ParagraphStyle) {
 
 export function textStyle(style: TextStyle) {
   const parts: string[] = [];
-  const runStyle = textRunStyle(style);
-  if (runStyle) {
-    parts.push(runStyle);
+
+  parts.push(dimensionsStyle(style.dimensions));
+
+  const rs = runStyle(style);
+  if (rs) {
+    parts.push(rs);
   }
 
-  const paraStyle = paragraphStyle(style);
-  if (paraStyle) {
-    parts.push(paraStyle);
+  const ps = paragraphStyle(style);
+  if (ps) {
+    parts.push(ps);
   }
 
   return parts.join(";");
@@ -263,7 +272,7 @@ function mergeAdjacentTextRuns(runs: TextRun[]): TextRun[] {
       continue;
     }
     const prev = out[out.length - 1];
-    if (textRunStyleEquals(prev, r)) {
+    if (runStyleEquals(prev, r)) {
       prev.text += r.text;
     } else {
       out.push({ ...r });
@@ -272,7 +281,7 @@ function mergeAdjacentTextRuns(runs: TextRun[]): TextRun[] {
   return out;
 }
 
-function textRunStyleEquals(a: TextRunStyle, b: TextRunStyle): boolean {
+function runStyleEquals(a: RunStyle, b: RunStyle): boolean {
   return (
     a.fontSize === b.fontSize &&
     a.fontFamily === b.fontFamily &&
@@ -285,20 +294,20 @@ function textRunStyleEquals(a: TextRunStyle, b: TextRunStyle): boolean {
   );
 }
 
-export type ResolvedTextRunStyle = {
-  [T in keyof TextRunStyle]-?: TextRunStyle[T] | "mixed";
+export type ResolvedRunStyle = {
+  [T in keyof RunStyle]-?: RunStyle[T] | "mixed";
 };
 
 export type ResolvedParagraphStyle = {
   [T in keyof ParagraphStyle]-?: ParagraphStyle[T] | "mixed";
 };
 
-export type ResolvedTextStyle = ResolvedTextRunStyle & ResolvedParagraphStyle;
+export type ResolvedTypographyStyle = ResolvedRunStyle & ResolvedParagraphStyle;
 
-export function resolveTextRunStyle(
-  styles: TextRunStyle[],
-  defaults: TextStyle,
-): ResolvedTextRunStyle {
+export function resolveRunStyle(
+  styles: RunStyle[],
+  defaults: TypographyStyle,
+): ResolvedRunStyle {
   if (styles.length === 0) {
     return {
       fontSize: defaults.fontSize,
@@ -310,7 +319,7 @@ export function resolveTextRunStyle(
   }
 
   const first = styles[0];
-  const result: ResolvedTextRunStyle = {
+  const result: ResolvedRunStyle = {
     fontSize: first.fontSize ?? defaults.fontSize,
     fontFamily: first.fontFamily ?? defaults.fontFamily,
     fontWeight: first.fontWeight ?? defaults.fontWeight,
@@ -348,7 +357,7 @@ export function resolveTextRunStyle(
 
 export function resolveParagraphStyle(
   styles: ParagraphStyle[],
-  defaults: TextStyle,
+  defaults: TypographyStyle,
 ): ResolvedParagraphStyle {
   if (styles.length === 0) {
     return {

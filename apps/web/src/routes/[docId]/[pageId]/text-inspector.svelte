@@ -1,10 +1,10 @@
 <script lang="ts">
   import {
-    applyUniformTextStyle,
+    applyUniformTypographyStyle,
     type Color,
-    type ResolvedTextStyle,
+    type ResolvedTypographyStyle,
     type TextNode,
-    type TextStyle,
+    type TypographyStyle,
   } from "@dashedhq/core";
   import {
     CaseSensitiveIcon,
@@ -20,7 +20,8 @@
 
   import ColorInput from "./color-input.svelte";
   import NumberInput from "./number-input.svelte";
-  import { getActiveTextStyle, setTextStyle } from "./prosemirror";
+  import { getActiveTypographyStyle, setTypographyStyle } from "./prosemirror";
+  import SizeInput from "./size-input.svelte";
 
   type Props = {
     node: TextNode;
@@ -30,9 +31,9 @@
 
   let { node = $bindable(), textEditorView, textEditorState }: Props = $props();
 
-  let activeStyle: ResolvedTextStyle = $derived.by(() => {
+  let activeStyle: ResolvedTypographyStyle = $derived.by(() => {
     if (textEditorState) {
-      return getActiveTextStyle(textEditorState, node);
+      return getActiveTypographyStyle(textEditorState, node);
     }
 
     return {
@@ -46,17 +47,24 @@
     };
   });
 
-  function changeTextStyle(style: Partial<TextStyle>) {
+  function changeTypographyStyle(style: Partial<TypographyStyle>) {
     if (textEditorView) {
-      setTextStyle(textEditorView, style);
+      setTypographyStyle(textEditorView, style);
       return;
     }
 
-    node = applyUniformTextStyle(node, style);
+    node = applyUniformTypographyStyle(node, style);
   }
 </script>
 
 {#if activeStyle}
+  <div class="flex flex-col gap-2">
+    <div class="text-neutral-50 text-sm">Size</div>
+    <div class="grid grid-cols-2 gap-2">
+      <SizeInput notation="W" bind:value={node.dimensions.width} />
+      <SizeInput notation="H" bind:value={node.dimensions.height} />
+    </div>
+  </div>
   <div class="flex flex-col gap-2">
     <div class="text-neutral-50 text-sm">Typography</div>
     <div class="grid grid-cols-2 gap-2">
@@ -65,7 +73,7 @@
         bind:value={
           () =>
             activeStyle.fontSize === "mixed" ? null : activeStyle.fontSize,
-          (v) => v != null && changeTextStyle({ fontSize: v })
+          (v) => v != null && changeTypographyStyle({ fontSize: v })
         }
       >
         {#snippet startDecorator()}<TypeIcon />{/snippet}
@@ -75,7 +83,7 @@
         bind:value={
           () =>
             activeStyle.fontWeight === "mixed" ? null : activeStyle.fontWeight,
-          (v) => v != null && changeTextStyle({ fontWeight: v })
+          (v) => v != null && changeTypographyStyle({ fontWeight: v })
         }
       >
         {#snippet startDecorator()}<span class="text-xs font-bold">W</span
@@ -86,7 +94,7 @@
         bind:value={
           () =>
             activeStyle.lineHeight === "mixed" ? null : activeStyle.lineHeight,
-          (v) => v != null && changeTextStyle({ lineHeight: v })
+          (v) => v != null && changeTypographyStyle({ lineHeight: v })
         }
       >
         {#snippet startDecorator()}<MoveVerticalIcon />{/snippet}
@@ -100,7 +108,7 @@
             activeStyle.letterSpacing === "mixed"
               ? null
               : activeStyle.letterSpacing,
-          (v) => v != null && changeTextStyle({ letterSpacing: v })
+          (v) => v != null && changeTypographyStyle({ letterSpacing: v })
         }
       >
         {#snippet startDecorator()}<CaseSensitiveIcon />{/snippet}
@@ -109,7 +117,8 @@
     {#if activeStyle.color !== "mixed"}
       <ColorInput
         bind:value={
-          () => activeStyle.color as Color, (c) => changeTextStyle({ color: c })
+          () => activeStyle.color as Color,
+          (c) => changeTypographyStyle({ color: c })
         }
       />
     {/if}
@@ -118,7 +127,7 @@
       bind:value={
         () =>
           activeStyle.textAlign === "mixed" ? undefined : activeStyle.textAlign,
-        (v) => changeTextStyle({ textAlign: v })
+        (v) => changeTypographyStyle({ textAlign: v })
       }
       class="grid grid-cols-3 bg-neutral-800 h-8 rounded-md"
     >

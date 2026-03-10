@@ -100,7 +100,7 @@
   ) {
     e.preventDefault();
     e.stopPropagation();
-    if (node.type !== "frame") return;
+    if (node.type !== "frame" && node.type !== "text") return;
 
     // Convert hug/fill to fixed using current rendered size
     if (
@@ -128,8 +128,9 @@
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
-  function onResizeMove(e: PointerEvent) {
-    if (!resizeHandle || node.type !== "frame") return;
+  function handleResizeMove(e: PointerEvent) {
+    if (!resizeHandle || (node.type !== "frame" && node.type !== "text"))
+      return;
 
     const dx = e.movementX / zoom;
     const dy = e.movementY / zoom;
@@ -163,12 +164,23 @@
     }
   }
 
-  function onResizeEnd(
+  function handleResizeEnd(
     e: PointerEvent & { currentTarget: EventTarget & HTMLDivElement },
   ) {
     if (!resizeHandle) return;
     resizeHandle = null;
     e.currentTarget.releasePointerCapture(e.pointerId);
+  }
+
+  function resetToHug(e: MouseEvent, axis: "x" | "y") {
+    e.preventDefault();
+    e.stopPropagation();
+    if (node.type !== "frame" && node.type !== "text") return;
+    if (axis === "x") {
+      node.dimensions.width = { type: "hug" };
+    } else {
+      node.dimensions.height = { type: "hug" };
+    }
   }
 
   const HANDLE_SIZE = 8;
@@ -184,7 +196,7 @@
     style="left: {s.x}px; top: {s.y}px; width: {s.w}px; height: {s.h}px"
   ></div>
 
-  {#if node.type === "frame"}
+  {#if node.type === "frame" || node.type === "text"}
     <!-- Edge hit areas -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -192,9 +204,11 @@
       style="left: {s.x + HANDLE_SIZE}px; top: {s.y -
         EDGE_THICKNESS / 2}px; width: {s.w -
         HANDLE_SIZE * 2}px; height: {EDGE_THICKNESS}px"
+      onclick={(e) => e.stopPropagation()}
       onpointerdown={(e) => startResize(e, "top")}
-      onpointermove={onResizeMove}
-      onpointerup={onResizeEnd}
+      onpointermove={handleResizeMove}
+      onpointerup={handleResizeEnd}
+      ondblclick={(e) => resetToHug(e, "y")}
     ></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -203,9 +217,11 @@
         s.h -
         EDGE_THICKNESS / 2}px; width: {s.w -
         HANDLE_SIZE * 2}px; height: {EDGE_THICKNESS}px"
+      onclick={(e) => e.stopPropagation()}
       onpointerdown={(e) => startResize(e, "bottom")}
-      onpointermove={onResizeMove}
-      onpointerup={onResizeEnd}
+      onpointermove={handleResizeMove}
+      onpointerup={handleResizeEnd}
+      ondblclick={(e) => resetToHug(e, "y")}
     ></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -213,9 +229,11 @@
       style="left: {s.x - EDGE_THICKNESS / 2}px; top: {s.y +
         HANDLE_SIZE}px; width: {EDGE_THICKNESS}px; height: {s.h -
         HANDLE_SIZE * 2}px"
+      onclick={(e) => e.stopPropagation()}
       onpointerdown={(e) => startResize(e, "left")}
-      onpointermove={onResizeMove}
-      onpointerup={onResizeEnd}
+      onpointermove={handleResizeMove}
+      onpointerup={handleResizeEnd}
+      ondblclick={(e) => resetToHug(e, "x")}
     ></div>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -223,9 +241,11 @@
       style="left: {s.x + s.w - EDGE_THICKNESS / 2}px; top: {s.y +
         HANDLE_SIZE}px; width: {EDGE_THICKNESS}px; height: {s.h -
         HANDLE_SIZE * 2}px"
+      onclick={(e) => e.stopPropagation()}
       onpointerdown={(e) => startResize(e, "right")}
-      onpointermove={onResizeMove}
-      onpointerup={onResizeEnd}
+      onpointermove={handleResizeMove}
+      onpointerup={handleResizeEnd}
+      ondblclick={(e) => resetToHug(e, "x")}
     ></div>
 
     <!-- Corner handles -->
@@ -245,9 +265,10 @@
           corner.handle === "bottom-left"}
         style="left: {corner.x - HANDLE_SIZE / 2}px; top: {corner.y -
           HANDLE_SIZE / 2}px; width: {HANDLE_SIZE}px; height: {HANDLE_SIZE}px"
+        onclick={(e) => e.stopPropagation()}
         onpointerdown={(e) => startResize(e, corner.handle)}
-        onpointermove={onResizeMove}
-        onpointerup={onResizeEnd}
+        onpointermove={handleResizeMove}
+        onpointerup={handleResizeEnd}
       ></div>
     {/each}
   {/if}

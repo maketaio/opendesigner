@@ -3,18 +3,18 @@ import {
   createText,
   cssToColor,
   hasParagraphStyleOverrides,
-  hasTextRunStyleOverrides,
+  hasRunStyleOverrides,
   type Paragraph,
   type ParagraphStyle,
   paragraphStyle,
-  type ResolvedTextStyle,
+  type ResolvedTypographyStyle,
   resolveParagraphStyle,
-  resolveTextRunStyle,
+  resolveRunStyle,
+  type RunStyle,
+  runStyle,
   type TextAlign,
   type TextNode,
-  type TextRunStyle,
-  textRunStyle,
-  type TextStyle,
+  type TypographyStyle,
 } from "@dashedhq/core";
 import {
   type AttributeSpec,
@@ -28,7 +28,7 @@ import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
 
 // -- PM attr types (null = "not set", falls back to node default) --
 
-type TextRunAttrs = {
+type RunAttrs = {
   fontSize: number | null;
   fontFamily: string | null;
   fontWeight: number | null;
@@ -43,7 +43,7 @@ type ParagraphAttrs = {
 
 // -- Converters: model <-> PM attrs --
 
-function textRunStyleToAttrs(run: TextRunStyle): TextRunAttrs {
+function runStyleToAttrs(run: RunStyle): RunAttrs {
   return {
     fontSize: run.fontSize ?? null,
     fontFamily: run.fontFamily ?? null,
@@ -53,8 +53,8 @@ function textRunStyleToAttrs(run: TextRunStyle): TextRunAttrs {
   };
 }
 
-function attrsToTextRunStyle(attrs: TextRunAttrs): TextRunStyle {
-  const run: TextRunStyle = {};
+function attrsToRunStyle(attrs: RunAttrs): RunStyle {
+  const run: RunStyle = {};
   if (attrs.fontSize !== null) run.fontSize = attrs.fontSize;
   if (attrs.fontFamily !== null) run.fontFamily = attrs.fontFamily;
   if (attrs.fontWeight !== null) run.fontWeight = attrs.fontWeight;
@@ -77,10 +77,10 @@ function attrsToParagraphStyle(attrs: ParagraphAttrs): ParagraphStyle {
   return p;
 }
 
-function marksToTextRunStyle(marks: readonly Mark[]): TextRunStyle {
+function marksToRunStyle(marks: readonly Mark[]): RunStyle {
   const mark = schema.marks.textStyle.isInSet(marks);
   if (!mark) return {};
-  return attrsToTextRunStyle(mark.attrs as TextRunAttrs);
+  return attrsToRunStyle(mark.attrs as RunAttrs);
 }
 
 // -- Schema --
@@ -92,11 +92,11 @@ const textStyleMark: MarkSpec = {
     fontWeight: { default: null },
     color: { default: null },
     letterSpacing: { default: null },
-  } satisfies Record<keyof TextRunAttrs, AttributeSpec>,
+  } satisfies Record<keyof RunAttrs, AttributeSpec>,
   toDOM(mark) {
     return [
       "span",
-      { style: textRunStyle(attrsToTextRunStyle(mark.attrs as TextRunAttrs)) },
+      { style: runStyle(attrsToRunStyle(mark.attrs as RunAttrs)) },
       0,
     ];
   },
@@ -158,8 +158,8 @@ export function nodeToDoc(node: TextNode): PMNode {
 
   const pmParagraphs = node.content.map((p) => {
     const inlineContent = p.content.map((run) => {
-      const marks = hasTextRunStyleOverrides(run)
-        ? [schema.marks.textStyle.create(textRunStyleToAttrs(run))]
+      const marks = hasRunStyleOverrides(run)
+        ? [schema.marks.textStyle.create(runStyleToAttrs(run))]
         : undefined;
       return schema.text(run.text, marks);
     });
@@ -188,7 +188,7 @@ export function docToNode(doc: PMNode, base: TextNode): TextNode {
       if (!inline.isText || !inline.text) return;
       paragraph.content.push({
         text: inline.text,
-        ...marksToTextRunStyle(inline.marks),
+        ...marksToRunStyle(inline.marks),
       });
     });
 
@@ -211,16 +211,16 @@ export function docToNode(doc: PMNode, base: TextNode): TextNode {
 
 // -- Active style (selection query) --
 
-export function getActiveTextStyle(
+export function getActiveTypographyStyle(
   state: EditorState,
   base: TextNode,
-): ResolvedTextStyle {
+): ResolvedTypographyStyle {
   const { $from, from, to, empty } = state.selection;
 
   if (empty) {
     const marks = state.storedMarks || $from.marks();
     return {
-      ...resolveTextRunStyle([marksToTextRunStyle(marks)], base),
+      ...resolveRunStyle([marksToRunStyle(marks)], base),
       ...resolveParagraphStyle(
         [attrsToParagraphStyle($from.parent.attrs as ParagraphAttrs)],
         base,
@@ -228,7 +228,7 @@ export function getActiveTextStyle(
     };
   }
 
-  const runStyles: TextRunStyle[] = [];
+  const runStyles: RunStyle[] = [];
   const paragraphStyles: ParagraphStyle[] = [];
 
   state.doc.nodesBetween(from, to, (node) => {
@@ -236,19 +236,22 @@ export function getActiveTextStyle(
       paragraphStyles.push(attrsToParagraphStyle(node.attrs as ParagraphAttrs));
     }
     if (node.isText) {
-      runStyles.push(marksToTextRunStyle(node.marks));
+      runStyles.push(marksToRunStyle(node.marks));
     }
   });
 
   return {
-    ...resolveTextRunStyle(runStyles, base),
+    ...resolveRunStyle(runStyles, base),
     ...resolveParagraphStyle(paragraphStyles, base),
   };
 }
 
 // -- Style mutation --
 
-export function setTextStyle(view: EditorView, style: Partial<TextStyle>) {
+export function setTypographyStyle(
+  view: EditorView,
+  style: Partial<TypographyStyle>,
+) {
   const { state } = view;
   const { $from, from, to, empty } = state.selection;
   const markType = schema.marks.textStyle;
@@ -266,17 +269,17 @@ export function setTextStyle(view: EditorView, style: Partial<TextStyle>) {
     });
   }
 
-  if (!hasTextRunStyleOverrides(style)) {
+  if (!hasRunStyleOverrides(style)) {
     if (tr.docChanged) view.dispatch(tr);
     return;
   }
 
   if (empty) {
-    const existing = marksToTextRunStyle(state.storedMarks || $from.marks());
-    const merged: TextRunStyle = { ...existing, ...style };
+    const existing = marksToRunStyle(state.storedMarks || $from.marks());
+    const merged: RunStyle = { ...existing, ...style };
 
-    if (hasTextRunStyleOverrides(merged)) {
-      tr = tr.addStoredMark(markType.create(textRunStyleToAttrs(merged)));
+    if (hasRunStyleOverrides(merged)) {
+      tr = tr.addStoredMark(markType.create(runStyleToAttrs(merged)));
     } else {
       tr = tr.removeStoredMark(markType);
     }
@@ -290,14 +293,14 @@ export function setTextStyle(view: EditorView, style: Partial<TextStyle>) {
 
     const nodeFrom = Math.max(from, pos);
     const nodeTo = Math.min(to, pos + node.nodeSize);
-    const existing = marksToTextRunStyle(node.marks);
-    const merged: TextRunStyle = { ...existing, ...style };
+    const existing = marksToRunStyle(node.marks);
+    const merged: RunStyle = { ...existing, ...style };
 
-    if (hasTextRunStyleOverrides(merged)) {
+    if (hasRunStyleOverrides(merged)) {
       tr = tr.addMark(
         nodeFrom,
         nodeTo,
-        markType.create(textRunStyleToAttrs(merged)),
+        markType.create(runStyleToAttrs(merged)),
       );
     } else {
       tr = tr.removeMark(nodeFrom, nodeTo, markType);

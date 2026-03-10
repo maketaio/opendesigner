@@ -5,9 +5,9 @@
     type Page,
     paragraphStyle,
     resolveChildren,
+    runStyle,
     screenStyle,
     type TextNode,
-    textRunStyle,
   } from "@dashedhq/core";
   import type { EditorState } from "prosemirror-state";
   import type { EditorView } from "prosemirror-view";
@@ -118,7 +118,7 @@
       {#each node.content as paragraph, i (i)}
         <p style={paragraphStyle(paragraph)}>
           {#each paragraph.content as run, j (j)}
-            <span style={textRunStyle({ ...node, ...run })}>{run.text}</span>
+            <span style={runStyle({ ...node, ...run })}>{run.text}</span>
           {/each}
         </p>
       {/each}

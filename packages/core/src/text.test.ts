@@ -1,16 +1,16 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  applyUniformTextStyle,
+  applyUniformTypographyStyle,
   createText,
   hasParagraphStyleOverrides,
-  hasTextRunStyleOverrides,
+  hasRunStyleOverrides,
   normalizeTextNode,
   paragraphStyle,
   resolveParagraphStyle,
-  resolveTextRunStyle,
+  resolveRunStyle,
+  runStyle,
   type TextNode,
-  textRunStyle,
   textStyle,
 } from "./text";
 
@@ -49,17 +49,17 @@ describe("createText", () => {
   });
 });
 
-describe("textRunStyle", () => {
+describe("runStyle", () => {
   test("empty style returns empty string", () => {
-    expect(textRunStyle({})).toBe("");
+    expect(runStyle({})).toBe("");
   });
 
   test("fontSize", () => {
-    expect(textRunStyle({ fontSize: 24 })).toBe("font-size: 24px");
+    expect(runStyle({ fontSize: 24 })).toBe("font-size: 24px");
   });
 
   test("all properties", () => {
-    const result = textRunStyle({
+    const result = runStyle({
       fontSize: 14,
       fontFamily: "Arial",
       fontWeight: 700,
@@ -74,7 +74,7 @@ describe("textRunStyle", () => {
   });
 
   test("letterSpacing 0 is included", () => {
-    expect(textRunStyle({ letterSpacing: 0 })).toBe("letter-spacing: 0px");
+    expect(runStyle({ letterSpacing: 0 })).toBe("letter-spacing: 0px");
   });
 });
 
@@ -191,14 +191,14 @@ describe("normalizeTextNode", () => {
   });
 });
 
-describe("resolveTextRunStyle", () => {
+describe("resolveRunStyle", () => {
   const defaults = createText({
     id: "t1",
     content: [{ content: [{ text: "x" }] }],
   });
 
   test("empty runs returns defaults", () => {
-    const result = resolveTextRunStyle([], defaults);
+    const result = resolveRunStyle([], defaults);
     expect(result.fontSize).toBe(16);
     expect(result.fontFamily).toBe("Inter, sans-serif");
     expect(result.fontWeight).toBe(400);
@@ -206,13 +206,13 @@ describe("resolveTextRunStyle", () => {
   });
 
   test("single style returns its effective values", () => {
-    const result = resolveTextRunStyle([{ fontSize: 24 }], defaults);
+    const result = resolveRunStyle([{ fontSize: 24 }], defaults);
     expect(result.fontSize).toBe(24);
     expect(result.fontFamily).toBe("Inter, sans-serif");
   });
 
   test("same style across entries", () => {
-    const result = resolveTextRunStyle(
+    const result = resolveRunStyle(
       [{ fontSize: 24 }, { fontSize: 24 }],
       defaults,
     );
@@ -220,7 +220,7 @@ describe("resolveTextRunStyle", () => {
   });
 
   test("mixed fontSize", () => {
-    const result = resolveTextRunStyle(
+    const result = resolveRunStyle(
       [{ fontSize: 24 }, { fontSize: 16 }],
       defaults,
     );
@@ -228,7 +228,7 @@ describe("resolveTextRunStyle", () => {
   });
 
   test("mixed color", () => {
-    const result = resolveTextRunStyle(
+    const result = resolveRunStyle(
       [
         { color: { r: 255, g: 0, b: 0, a: 1 } },
         { color: { r: 0, g: 255, b: 0, a: 1 } },
@@ -240,7 +240,7 @@ describe("resolveTextRunStyle", () => {
 
   test("same color across entries", () => {
     const color = { r: 255, g: 0, b: 0, a: 1 };
-    const result = resolveTextRunStyle(
+    const result = resolveRunStyle(
       [{ color }, { color: { ...color } }],
       defaults,
     );
@@ -297,7 +297,7 @@ describe("resolveParagraphStyle", () => {
   });
 });
 
-describe("applyUniformTextStyle", () => {
+describe("applyUniformTypographyStyle", () => {
   function makeNode(
     overrides: Partial<TextNode> & { content: TextNode["content"] },
   ): TextNode {
@@ -311,7 +311,7 @@ describe("applyUniformTextStyle", () => {
     const node = makeNode({
       content: [{ content: [{ text: "hello" }] }],
     });
-    const result = applyUniformTextStyle(node, { fontSize: 24 });
+    const result = applyUniformTypographyStyle(node, { fontSize: 24 });
     expect(result.fontSize).toBe(24);
   });
 
@@ -319,7 +319,7 @@ describe("applyUniformTextStyle", () => {
     const node = makeNode({
       content: [{ content: [{ text: "hello", fontSize: 14 }] }],
     });
-    const result = applyUniformTextStyle(node, { fontSize: 24 });
+    const result = applyUniformTypographyStyle(node, { fontSize: 24 });
     expect(result.content[0].content[0].fontSize).toBeUndefined();
   });
 
@@ -329,7 +329,7 @@ describe("applyUniformTextStyle", () => {
         { content: [{ text: "hello", fontSize: 14, fontWeight: 700 }] },
       ],
     });
-    const result = applyUniformTextStyle(node, { fontSize: 24 });
+    const result = applyUniformTypographyStyle(node, { fontSize: 24 });
     expect(result.content[0].content[0].fontWeight).toBe(700);
     expect(result.content[0].content[0].fontSize).toBeUndefined();
   });
@@ -338,7 +338,7 @@ describe("applyUniformTextStyle", () => {
     const node = makeNode({
       content: [{ textAlign: "center", content: [{ text: "hello" }] }],
     });
-    const result = applyUniformTextStyle(node, { textAlign: "end" });
+    const result = applyUniformTypographyStyle(node, { textAlign: "end" });
     expect(result.textAlign).toBe("end");
     expect(result.content[0].textAlign).toBeUndefined();
   });
@@ -349,7 +349,7 @@ describe("applyUniformTextStyle", () => {
         { textAlign: "center", lineHeight: 2, content: [{ text: "hello" }] },
       ],
     });
-    const result = applyUniformTextStyle(node, { textAlign: "end" });
+    const result = applyUniformTypographyStyle(node, { textAlign: "end" });
     expect(result.content[0].lineHeight).toBe(2);
     expect(result.content[0].textAlign).toBeUndefined();
   });
@@ -364,7 +364,7 @@ describe("applyUniformTextStyle", () => {
       ],
     });
     const green = { r: 0, g: 255, b: 0, a: 1 };
-    const result = applyUniformTextStyle(node, { color: green });
+    const result = applyUniformTypographyStyle(node, { color: green });
     expect(result.color).toEqual(green);
     expect(result.content[0].content[0].color).toBeUndefined();
     expect(result.content[1].content[0].color).toBeUndefined();
@@ -374,37 +374,37 @@ describe("applyUniformTextStyle", () => {
     const node = makeNode({
       content: [{ content: [{ text: "hello", fontSize: 14 }] }],
     });
-    applyUniformTextStyle(node, { fontSize: 24 });
+    applyUniformTypographyStyle(node, { fontSize: 24 });
     expect(node.fontSize).toBe(16);
     expect(node.content[0].content[0].fontSize).toBe(14);
   });
 });
 
-describe("hasTextRunStyleOverrides", () => {
+describe("hasRunStyleOverrides", () => {
   test("no overrides", () => {
-    expect(hasTextRunStyleOverrides({})).toBe(false);
+    expect(hasRunStyleOverrides({})).toBe(false);
   });
 
   test("fontSize override", () => {
-    expect(hasTextRunStyleOverrides({ fontSize: 24 })).toBe(true);
+    expect(hasRunStyleOverrides({ fontSize: 24 })).toBe(true);
   });
 
   test("fontFamily override", () => {
-    expect(hasTextRunStyleOverrides({ fontFamily: "Arial" })).toBe(true);
+    expect(hasRunStyleOverrides({ fontFamily: "Arial" })).toBe(true);
   });
 
   test("fontWeight override", () => {
-    expect(hasTextRunStyleOverrides({ fontWeight: 700 })).toBe(true);
+    expect(hasRunStyleOverrides({ fontWeight: 700 })).toBe(true);
   });
 
   test("color override", () => {
-    expect(
-      hasTextRunStyleOverrides({ color: { r: 0, g: 0, b: 0, a: 1 } }),
-    ).toBe(true);
+    expect(hasRunStyleOverrides({ color: { r: 0, g: 0, b: 0, a: 1 } })).toBe(
+      true,
+    );
   });
 
   test("letterSpacing override", () => {
-    expect(hasTextRunStyleOverrides({ letterSpacing: 2 })).toBe(true);
+    expect(hasRunStyleOverrides({ letterSpacing: 2 })).toBe(true);
   });
 });
 
